@@ -1,0 +1,83 @@
+services:
+    kafka:
+        image: apache/kafka-native:3.9.0
+        hostname: kafka
+        container_name: kafka
+        ports:
+            - "9092:9092"
+            - "9093:9093"
+        environment:
+            CLUSTER_ID: "KaJwTnUyQ6qRwN5WbemE4w"
+            KAFKA_NODE_ID: 1
+            KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+            # Configure multiple listeners for both internal and external access
+            KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093,INTERNAL://:29092"
+            # Advertise both external and internal addresses
+            KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,INTERNAL://kafka:29092"
+            # Define security protocols for all listeners
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT"
+            KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+            KAFKA_PROCESS_ROLES: "broker,controller"
+            KAFKA_NODE_ROLE: "controller+broker"
+            KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+            # Tell Kafka which listener to use for inter-broker communication
+            KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        volumes:
+            - kafka-data:/tmp/kraft-combined-logs
+        networks:
+            - iceberg
+
+    generator:
+        image: ghcr.io/kameshsampath/flink-polaris-etl-demo/vehicle-telematics-generator:latest
+        build:
+            context: generator
+            dockerfile: Dockerfile
+        environment:
+            - APP_LOG_LEVEL=DEBUG
+        depends_on:
+            - kafka
+        entrypoint:
+            - /app/bin/entrypoint
+        command:
+            - "--num-transactions=-1"
+            - "--bootstrap-servers=kafka:29092"
+            - "--delay=1"
+        networks:
+            - iceberg
+
+    # TODO: enable later
+    # trino:
+    #     image: docker.io/trinodb/trino
+    #     container_name: trino
+    #     ports:
+    #         - "58755:8080"
+    #     volumes:
+    #         - ./config/trino-config.properties:/etc/trino/config.properties
+    #         - ./trino-catalogs:/etc/trino/catalog
+    #     networks:
+    #         - iceberg
+
+    # dashboard:
+    #     build:
+    #         context: dashboard
+    #         dockerfile: dashboard/Dockerfile
+    #     image: ghcr.io/kameshsampath/kafka-iceberg-demo/dashboard:latest
+    #     container_name: dashboard
+    #     ports:
+    #         - "8501:8501"
+    #     volumes:
+    #         - ./.streamlit:/app/.streamlit
+    #     networks:
+    #         - iceberg
+
+volumes:
+    minio-data:
+    kafka-data:
+    catalog-store:
+    postgres-data:
+
+networks:
+  iceberg:
+    external: true
+    name: flink_polaris_etl_demo

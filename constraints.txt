@@ -1,0 +1,3 @@
+pandas==2.2.3
+python-dotenv==1.0.1
+aiokafka=0.12.0
