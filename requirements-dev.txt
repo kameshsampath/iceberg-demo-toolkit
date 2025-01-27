@@ -1,0 +1,6 @@
+ansible
+ipykernel
+watchdog
+ansible-lint
+botocore
+boto3

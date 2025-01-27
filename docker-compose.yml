@@ -31,7 +31,7 @@ services:
     generator:
         image: ghcr.io/kameshsampath/flink-polaris-etl-demo/vehicle-telematics-generator:latest
         build:
-            context: generator
+            context: .
             dockerfile: Dockerfile
         environment:
             - APP_LOG_LEVEL=DEBUG

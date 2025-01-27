@@ -1,5 +1,5 @@
 import random
-from datetime import datetime
+import time
 
 
 class VehicleTelematicsGenerator:
@@ -60,10 +60,10 @@ class VehicleTelematicsGenerator:
         profile = self.vehicle_profiles[vehicle_id]
 
         telemetry = {
-            "timestamp": datetime.now().isoformat(),
+            "epoch_t": time.time(),
             "vehicle_id": vehicle_id,
             "manufacturer": profile["manufacturer"],
-            "year": profile["year"],
+            "model_year": profile["year"],
             "category": profile["category"],
             "type": profile["type"],
             "engine_type": profile["engine_type"],

@@ -1,5 +1,5 @@
 python-dotenv
-ipykernel
+
 aiokafka
 streamlit
 pandas

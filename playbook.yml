@@ -1,0 +1,118 @@
+- name: Flink Polaris Demo AWS Setup
+  hosts: localhost
+  vars:
+    bucket_name: "kamesh-demos-flink-vehicle-telematics"
+    s3_role_name: "kamesh-demos-flink-polaris"
+    s3_role_path: /
+    assume_role_policy: "{{ lookup('ansible.builtin.template', 'templates/trust_policy.j2')}}"
+    policy_name: "kamesh_flink_demo"
+    policy_document: "{{ lookup('template', 'templates/role_policy.j2')}}"
+    bucket_region: us-west-2
+    external_id: "{{ lookup('env', 'TRUST_POLICY_EXTERNAL_ID') }}"
+    catalog_user_id: "{{ lookup('env', 'AWS_CATALOG_USER_ARN') }}"
+  tasks:
+    # Setup tasks
+    # ansible-playbook playbook.yml --tags setup
+    - name: Get AWS account ID
+      ansible.builtin.command: >
+        aws sts get-caller-identity --query Account --output text
+      register: aws_account_id_cmd
+      changed_when: false
+      tags:
+        - setup
+
+    - name: Set Catalog User ID
+      ansible.builtin.set_fact:
+        catalog_user_id: "{{ catalog_user_id or aws_account_id_cmd.stdout }}"
+      tags:
+        - setup
+
+    - name: Debug Catalog User ID
+      ansible.builtin.debug:
+        msg: "{{ catalog_user_id }}"
+      tags:
+        - setup
+
+    - name: "Create s3 bucket '{{ bucket_name }}'"
+      amazon.aws.s3_bucket:
+        name: "{{ bucket_name }}"
+        state: present
+        region: "{{ bucket_region }}"
+        encryption: "AES256"
+        versioning: true
+        tags:
+          Name: "Flink Demo Open Catalog"
+          UsedBy: "Flink Demo"
+          CreatedBy: "Kamesh Sampath"
+      tags:
+        - setup
+
+    - name: Create IAM Role
+      amazon.aws.iam_role:
+        name: "{{ s3_role_name }}"
+        path: "{{ s3_role_path }}"
+        assume_role_policy_document: |
+          {{ assume_role_policy | to_json }}
+        state: present
+        region: "{{ bucket_region }}"
+        tags:
+          Name: "Flink Demo Role"
+          UsedBy: "Flink Demo"
+          CreatedBy: "Kamesh Sampath"
+      tags:
+        - setup
+      register: demo_role
+
+    - name: Attach Policy to role
+      amazon.aws.iam_policy:
+        iam_type: role
+        iam_name: "{{ s3_role_name }}"
+        policy_name: "{{ policy_name }}"
+        state: present
+        policy_json: |
+          {{ policy_document | to_json }}
+        region: "{{ bucket_region }}"
+        skip_duplicates: true
+      tags:
+        - setup
+
+    - name: Print Role ARN
+      ansible.builtin.debug:
+        msg: "{{ demo_role.iam_role.arn }}"
+      tags:
+        - setup
+    # Cleanup tasks
+    # ansible-playbook playbook.yml --tags cleanup
+    - name: Remove IAM role policy
+      amazon.aws.iam_policy:
+        iam_type: role
+        iam_name: "{{ s3_role_name }}"
+        policy_name: "{{ policy_name }}"
+        state: absent
+        region: "{{ bucket_region }}"
+      tags:
+        - cleanup
+
+    - name: Delete IAM role
+      amazon.aws.iam_role:
+        name: "{{ s3_role_name }}"
+        state: absent
+        region: "{{ bucket_region }}"
+      tags:
+        - cleanup
+
+    - name: Empty S3 bucket
+      amazon.aws.s3_bucket:
+        name: "{{ bucket_name }}"
+        force: true
+        region: "{{ bucket_region }}"
+      tags:
+        - cleanup
+
+    - name: Delete S3 bucket
+      amazon.aws.s3_bucket:
+        name: "{{ bucket_name }}"
+        state: absent
+        region: "{{ bucket_region }}"
+      tags:
+        - cleanup
