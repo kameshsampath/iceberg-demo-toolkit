@@ -1,17 +1,21 @@
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": "sts:AssumeRole",
-            "Principal": {
-                "AWS": "{{ catalog_user_id }}"
-            },
-            "Condition": {
-                "StringEquals": {
-                    "sts:ExternalId": "{{ external_id }}"
-                }
-            }
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Principal": {
+          "AWS": [
+            {%+ for principal in trusted_principals %}
+                  "{{ principal }}"{% if not loop.last %},{% endif %}
+            {% endfor +%}
+            ]
+          },
+          "Condition": {
+            "StringEquals": {
+                "sts:ExternalId": "{{ external_id }}"
+          }
         }
-    ]
+    }
+  ]
 }

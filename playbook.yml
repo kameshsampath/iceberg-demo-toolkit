@@ -9,7 +9,7 @@
     policy_document: "{{ lookup('template', 'templates/role_policy.j2')}}"
     bucket_region: us-west-2
     external_id: "{{ lookup('env', 'TRUST_POLICY_EXTERNAL_ID') }}"
-    catalog_user_id: "{{ lookup('env', 'AWS_CATALOG_USER_ARN') }}"
+    trusted_principals: "{{ lookup('env', 'AWS_TRUSTED_PRINCIPALS')  }}"
   tasks:
     # Setup tasks
     # ansible-playbook playbook.yml --tags setup
@@ -21,19 +21,13 @@
       tags:
         - setup
 
-    - name: Set Catalog User ID
+    - name: Set Trusted Principals
       ansible.builtin.set_fact:
-        catalog_user_id: "{{ catalog_user_id or aws_account_id_cmd.stdout }}"
+        trusted_principals: "{{ trusted_principals and trusted_principals.split(',') | map('trim') | list + [aws_account_id_cmd.stdout] }}"
       tags:
         - setup
 
-    - name: Debug Catalog User ID
-      ansible.builtin.debug:
-        msg: "{{ catalog_user_id }}"
-      tags:
-        - setup
-
-    - name: "Create s3 bucket '{{ bucket_name }}'"
+    - name: Create s3 bucket
       amazon.aws.s3_bucket:
         name: "{{ bucket_name }}"
         state: present
