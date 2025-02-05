@@ -2,7 +2,7 @@
 
 Demo utilities repo that will have Ansible scripts, docker compose definitions that can be used as base for building Demos with Apache Iceberg.
 
-> [!WARNING]:
+> [!IMPORTANT]
 > Under development and subject to change. Strictly not for production use.
 
 ## Key Features
