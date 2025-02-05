@@ -1,3 +1,4 @@
 work
 .direnv
 __pycache__
+.venv

@@ -17,15 +17,14 @@ ENV HOME=/home/me
 ENV PATH="${HOME}/.local/bin:${PATH}"
 ENV PYTHONUNBUFFERED=1 
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONPATH="/app/src:$PYTHONPATH"
+ENV PYTHONPATH="/app:$PYTHONPATH"
 
 ADD requirements.txt /app/requirements.txt
 
 RUN pip install --no-cache-dir --user -U pip  \
     && pip install --no-cache-dir --user  -r /app/requirements.txt
 
-COPY generator .
+COPY generator/balloon_popper.py /app/bin/entrypoint
 COPY common .
-COPY scripts/generator.py /app/bin/entrypoint
 
-CMD [ "/app/bin/entrypoint","-help" ]
+CMD [ "/app/bin/entrypoint","--help" ]
