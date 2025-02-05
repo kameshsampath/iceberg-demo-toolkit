@@ -1,6 +1,6 @@
 services:
     balloon-popper:
-        image: ghcr.io/kameshsampath/stream-demos-datagen/balloon-popper:latest
+        image: ghcr.io/kameshsampath/iceberg-demo-toolkit/balloon-popper:latest
         build:
             context: .
             dockerfile: Dockerfile
