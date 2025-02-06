@@ -13,10 +13,11 @@ on:
       - .tools-version
   pull_request:
     branches: [main]
-  workflow_dispatch: # Keep this if you want manual triggers
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -67,12 +68,23 @@ jobs:
       - name: Generate tags
         id: tags
         run: |
+          TAGS=""
+          # Base tag with Python version
+          TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag-suffix }}"
+
+          # For version tags
           if [[ "${{ github.ref }}" == "refs/tags/"* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
-            echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag-suffix }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag-suffix }}-${VERSION}" >> $GITHUB_OUTPUT
-          else
-            echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag-suffix }}" >> $GITHUB_OUTPUT
+            TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag-suffix }}-${VERSION}"
+            TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
           fi
+
+          # For main branch pushes
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          fi
+
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
