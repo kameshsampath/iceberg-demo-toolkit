@@ -11,6 +11,7 @@ on:
       - .env.example
       - docker-compose.yml
       - .tools-version
+      - stack/**
   pull_request:
     branches: [main]
   workflow_dispatch:

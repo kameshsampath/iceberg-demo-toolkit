@@ -1,0 +1,108 @@
+services:
+  kafka:
+      image: apache/kafka-native:3.9.0
+      hostname: kafka
+      container_name: kafka
+      ports:
+          - "9092:9092"
+          - "9093:9093"
+      environment:
+          CLUSTER_ID: "KaJwTnUyQ6qRwN5WbemE4w"
+          KAFKA_NODE_ID: 1
+          KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+          # Configure multiple listeners for both internal and external access
+          KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093,INTERNAL://:29092"
+          # Advertise both external and internal addresses
+          KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,INTERNAL://kafka:29092"
+          # Define security protocols for all listeners
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT"
+          KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+          KAFKA_PROCESS_ROLES: "broker,controller"
+          KAFKA_NODE_ROLE: "controller+broker"
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+          # Tell Kafka which listener to use for inter-broker communication
+          KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      volumes:
+          - kafka-data:/tmp/kraft-combined-logs
+      restart: always
+      networks:
+          - stack
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file:
+      - .minio.env
+    entrypoint: >
+      /bin/sh -c "
+      minio server /data --address '0.0.0.0:9000' --console-address '0.0.0.0:9001' &
+      sleep 5;
+      mc alias set myminio http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      mc mb myminio/demos-bucket --ignore-existing;
+      mc mb myminio/warehouse --ignore-existing;
+      mc mb myminio/hummock001 --ignore-existing;
+      mkdir -p /data/hummock001;
+      tail -f /dev/null"
+    volumes:
+     - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://minio:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - stack
+    restart: always
+
+  postgres:
+    image: "postgres:15-alpine"
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    env_file:
+      - .postgres.env
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init.d:/docker-entrypoint-initdb.d
+    networks:
+      - stack
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  nessie:
+    image: ghcr.io/projectnessie/nessie:0.102.1
+    container_name: nessie
+    ports:
+      - "19120:19120"
+    env_file:
+      - .nessie.env
+    depends_on:
+      - minio
+      - postgres
+    networks:
+      - stack
+    #restart: always
+  
+  adminer:
+    image: adminer
+    ports:
+      - "9090:8080"
+    networks:
+      - stack
+    restart: always
+
+volumes:
+  kafka-data:
+  minio-data:
+  postgres-data:
+
+networks:
+  stack:
